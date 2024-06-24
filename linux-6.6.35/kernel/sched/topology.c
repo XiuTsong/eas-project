@@ -380,6 +380,7 @@ static bool build_perf_domains(const struct cpumask *cpu_map)
 	struct cpufreq_policy *policy;
 	struct cpufreq_governor *gov;
 
+	pr_info("xxxxx: in %s\n", __func__);
 	if (!sysctl_sched_energy_aware)
 		goto free;
 
@@ -406,6 +407,8 @@ static bool build_perf_domains(const struct cpumask *cpu_map)
 		}
 		goto free;
 	}
+
+	pr_info("xxxxx: %s: arch_scale_freq_invariant true\n", __func__);
 
 	for_each_cpu(i, cpu_map) {
 		/* Skip already covered CPUs. */
@@ -439,6 +442,8 @@ static bool build_perf_domains(const struct cpumask *cpu_map)
 		nr_pd++;
 		nr_ps += em_pd_nr_perf_states(pd->em_pd);
 	}
+
+	pr_info("xxxxx: %s: cpu_map_check okk\n", __func__);
 
 	/* Bail out if the Energy Model complexity is too high. */
 	if (nr_pd * (nr_ps + nr_cpus) > EM_MAX_COMPLEXITY) {
@@ -1359,11 +1364,11 @@ asym_cpu_capacity_classify(const struct cpumask *sd_span,
 	WARN_ON_ONCE(!count && !list_empty(&asym_cap_list));
 
 	/* No asymmetry detected */
-	if (count < 2)
-		return 0;
-	/* Some of the available CPU capacity values have not been detected */
-	if (miss)
-		return SD_ASYM_CPUCAPACITY;
+	// if (count < 2)
+	// 	return 0;
+	// /* Some of the available CPU capacity values have not been detected */
+	// if (miss)
+	// 	return SD_ASYM_CPUCAPACITY;
 
 	/* Full asymmetry */
 	return SD_ASYM_CPUCAPACITY | SD_ASYM_CPUCAPACITY_FULL;
@@ -2357,7 +2362,7 @@ static bool topology_span_sane(struct sched_domain_topology_level *tl,
  * Build sched domains for a given set of CPUs and attach the sched domains
  * to the individual CPUs
  */
-static int
+static int __attribute__((optimize("O0")))
 build_sched_domains(const struct cpumask *cpu_map, struct sched_domain_attr *attr)
 {
 	enum s_alloc alloc_state = sa_none;
@@ -2366,8 +2371,11 @@ build_sched_domains(const struct cpumask *cpu_map, struct sched_domain_attr *att
 	struct rq *rq = NULL;
 	int i, ret = -ENOMEM;
 	bool has_asym = false;
+	int my_flag;
 
-	if (WARN_ON(cpumask_empty(cpu_map)))
+	// if (WARN_ON(cpumask_empty(cpu_map)))
+	// 	goto error;
+	if (cpumask_empty(cpu_map))
 		goto error;
 
 	alloc_state = __visit_domain_allocation_hell(&d, cpu_map);
@@ -2381,11 +2389,17 @@ build_sched_domains(const struct cpumask *cpu_map, struct sched_domain_attr *att
 		sd = NULL;
 		for_each_sd_topology(tl) {
 
-			if (WARN_ON(!topology_span_sane(tl, cpu_map, i)))
+			// if (WARN_ON(!topology_span_sane(tl, cpu_map, i)))
+			// 	goto error;
+			if ((!topology_span_sane(tl, cpu_map, i)))
 				goto error;
 
 			sd = build_sched_domain(tl, cpu_map, attr, sd, i);
 
+			my_flag = SD_ASYM_CPUCAPACITY;
+			pr_info("sd flags %x\n", my_flag);
+			my_flag = SD_ASYM_CPUCAPACITY_FULL;
+			pr_info("sd flag full %x\n", my_flag);
 			has_asym |= sd->flags & SD_ASYM_CPUCAPACITY;
 
 			if (tl == sched_domain_topology)
@@ -2651,6 +2665,7 @@ void partition_sched_domains_locked(int ndoms_new, cpumask_var_t doms_new[],
 	bool __maybe_unused has_eas = false;
 	int i, j, n;
 	int new_topology;
+	int ret;
 
 	lockdep_assert_held(&sched_domains_mutex);
 
@@ -2729,7 +2744,9 @@ match2:
 			}
 		}
 		/* No match - add perf. domains for a new rd */
-		has_eas |= build_perf_domains(doms_new[i]);
+		ret = build_perf_domains(doms_new[i]);
+		has_eas |= ret;
+		pr_info("xxxxx build_perf_domains ret: %d\n", ret);
 match3:
 		;
 	}
