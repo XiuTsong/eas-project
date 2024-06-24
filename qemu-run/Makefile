@@ -31,8 +31,10 @@ linux-clean:
 
 run-only:
 	qemu-system-x86_64  \
+	  -S -s \
+	  -smp 2 \
 	  -kernel $(LINUX_IMAGE) \
 	  -initrd $(CURDIR)/initramfs-busybox-x64.cpio.gz \
 	  -nographic \
-	  --append "root=/dev/ram init=/init console=ttyS0" \
+	  --append "root=/dev/ram init=/init console=ttyS0 nokaslr" \
 	  -m 512M
